@@ -44,8 +44,8 @@ class Comment(Model):
     created_at = FloatField(default=time.time)
 
 # 创建实例:
-user = User(id=123, name='Michael')
+# user = User(id=123, name='Michael')
 # 存入数据库:
-user.insert()
+# user.insert()
 # 查询所有User对象:
-users = User.findAll()
+# users = User.findAll()

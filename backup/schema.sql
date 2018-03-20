@@ -1,11 +1,14 @@
+/*删除数据库*/
 drop database if exists awesome;
 
+/*创建数据库*/
 create database awesome;
 
+/**/
 use awesome;
-
+/*授权*/
 grant select, insert, update, delete on awesome.* to 'www-data'@'localhost' identified by 'www-data';
-
+/*创建用户表*/
 create table users (
     `id` varchar(50) not null,
     `email` varchar(50) not null,

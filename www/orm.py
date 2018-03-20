@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import asyncio, logging
-
+# from pymysqlpool import ConnectionPool;
 import aiomysql
-
+from www.pymysql_pool import ConnectionPool
 
 def log(sql, args=()):
     logging.info('SQL: %s' % sql)
@@ -14,17 +14,29 @@ def log(sql, args=()):
 async def create_pool(loop, **kw):
     logging.info('create database connection pool...');
     global __pool;
-    __pool = await aiomysql.create_pool(
-        host=kw.get('host', 'localhost'),
+    # __pool = await aiomysql.create_pool(
+    #     host=kw.get('host', '127.0.0.1'),
+    #     port=kw.get('port', 3306),
+    #     user=kw['user'],
+    #     password=kw['password'],
+    #     db=kw['db'],
+    #     charset=kw.get('charset', 'utf8'),
+    #     autocommit=kw.get('autocommit', True),
+    #     maxsize=kw.get('maxsize', 10),
+    #     minsize=kw.get('minsize', 1),
+    #     loop=loop
+    # );
+    __pool=ConnectionPool(
+        host=kw.get('host', '127.0.0.1'),
         port=kw.get('port', 3306),
         user=kw['user'],
         password=kw['password'],
         db=kw['db'],
         charset=kw.get('charset', 'utf8'),
-        autocommit=kw.get('autocommit', True),
-        maxsize=kw.get('maxsize', 10),
-        minsize=kw.get('minsize', 1),
-        loop=loop
+        autocommit=kw.get('autocommit', True)
+        # maxsize=kw.get('maxsize', 10),
+        # minsize=kw.get('minsize', 1),
+        # loop=loop
     );
 
 
@@ -34,11 +46,13 @@ async def select(sql, args, size=None):
     log(sql, args)
     # 引入全局变量 连接池
     global __pool;
-    # 从连接池获取连接
-    async with __pool.get() as conn:
+    # 从连接池获取连接async
+    with __pool.get_connection() as conn:
         # 说的游标 注意要传日游标类型
         # cur = await conn.cursor(aiomysql.DictCursor);
-        async with conn.cursor(aiomysql.DictCursor) as cur:
+        #aiomysql.DictCursor
+        # async with conn.cursor() as cur:
+        with conn as cur:
             # 执行sql (SQL语句的占位符是?，而MySQL的占位符是%s)
             # 注意要始终坚持使用带参数的SQL，而不是自己拼接SQL字符串，这样可以防止SQL注入攻击。
             await cur.execute(sql.replce('?', '%s'), (args or ()))
@@ -62,13 +76,21 @@ async def select(sql, args, size=None):
 # Insert, Update, Delete
 # @asyncio.coroutine
 async def execute(sql, args, autocommit=True):
+    log(sql, args);
+    print(sql, args)
     logging.info(sql)
-    async with __pool.get() as conn:
+    with __pool.get_connection() as conn:
         if not autocommit:
             await conn.begin()
-        try:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(sql.replace('?', '%s'), args)
+        try:#cursor
+            #aiomysql.DictCursor
+            # async with conn.cursor() as cur:
+            with conn as cur:
+                new_sql=sql.replace('?', '%s') % tuple(
+                    map(lambda obj: '\'' + str(obj) + '\'' if isinstance(obj, str) else obj, args))
+                print(new_sql);
+                # cur.execute(sql % args)
+                cur.execute(new_sql);
                 affected = cur.rowcount
             if not autocommit:
                 await conn.commit();
@@ -114,7 +136,8 @@ class BooleanField(Field):
     def __init__(self, name=None, default=False):
         super().__init__(name, 'boolean', False, default)
 
-#整型
+
+# 整型
 class IntegerField(Field):
     def __init__(self, name=None, primary_key=False, default=0):
         super().__init__(name, 'bigint', primary_key, default)
@@ -190,7 +213,8 @@ class Model(dict, metaclass=ModelMetaclass):
     def __getattr__(self, key):
         try:
             return self[key];
-        except KeyError:
+        except KeyError as e:
+            print(e);
             raise AttributeError(r"'Model' object has no attribute '%s'" % key);
 
     def __setattr__(self, key, value):
