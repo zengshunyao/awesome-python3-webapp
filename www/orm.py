@@ -4,7 +4,7 @@
 import asyncio, logging
 # from pymysqlpool import ConnectionPool;
 import aiomysql
-from www.pymysql_pool import ConnectionPool
+from pymysql_pool import ConnectionPool
 
 def log(sql, args=()):
     logging.info('SQL: %s' % sql)

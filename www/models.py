@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 
-from www.orm import Model, StringField, BooleanField, FloatField, TextField,IntegerField;
+from orm import Model, StringField, BooleanField, FloatField, TextField,IntegerField;
 import time, uuid;
 
 def next_id():
