@@ -4,10 +4,34 @@
 import asyncio, logging
 # from pymysqlpool import ConnectionPool;
 import aiomysql
+import pymysql
+
 from pymysql_pool import ConnectionPool
 
-def log(sql, args=()):
-    logging.info('SQL: %s' % sql)
+
+def log(obj, args=()):
+    if isinstance(object, str):
+        logging.info('SQL: %s' % obj);
+    elif isinstance(obj, list):
+        logging.info('Result:');
+        print("[" + ('' if len(obj) != 0 else "]"));
+        each_list(obj, count=True);
+        if len(obj) != 0:
+            print("]");
+        # pass;
+
+# 打印嵌套list中每个数据（遍历列表）
+def each_list(list_name, count=False, level=0):  # 加入控制形参 count 默认为不开启缩进
+    for yuansu in list_name:
+        if isinstance(yuansu, list):  # 判断当前元素是不是列表
+            each_list(yuansu, count, level + 1)  # 如是,则递归调用,并且标记当前元素是列表
+        else:
+            if count:  # 判断是否开启缩进
+                for tab in range(level):  # 固定次数
+                    print("\t", end='')
+                print(yuansu)
+            else:
+                print(yuansu);
 
 
 # @asyncio.coroutine
@@ -26,14 +50,16 @@ async def create_pool(loop, **kw):
     #     minsize=kw.get('minsize', 1),
     #     loop=loop
     # );
-    __pool=ConnectionPool(
+    __pool = ConnectionPool(
         host=kw.get('host', '127.0.0.1'),
         port=kw.get('port', 3306),
         user=kw['user'],
         password=kw['password'],
         db=kw['db'],
         charset=kw.get('charset', 'utf8'),
-        autocommit=kw.get('autocommit', True)
+        autocommit=kw.get('autocommit', True),
+        # 增加返回dict型数据
+        cursorclass=pymysql.cursors.DictCursor
         # maxsize=kw.get('maxsize', 10),
         # minsize=kw.get('minsize', 1),
         # loop=loop
@@ -50,24 +76,39 @@ async def select(sql, args, size=None):
     with __pool.get_connection() as conn:
         # 说的游标 注意要传日游标类型
         # cur = await conn.cursor(aiomysql.DictCursor);
-        #aiomysql.DictCursor
+        # aiomysql.DictCursor
         # async with conn.cursor() as cur:
+
+        # pymysql 返回DictCursor
+        # import pymysql
+        # connection = pymysql.connect(db="test")
+        # cursor = connection.cursor(pymysql.cursors.DictCursor)
+        # cursor.execute("SELECT ...")
+
         with conn as cur:
             # 执行sql (SQL语句的占位符是?，而MySQL的占位符是%s)
             # 注意要始终坚持使用带参数的SQL，而不是自己拼接SQL字符串，这样可以防止SQL注入攻击。
-            await cur.execute(sql.replce('?', '%s'), (args or ()))
-            # 判断是否一条或一条以上
-            if size:
+            cur.execute(sql.replace('?', '%s'), (args or ()));
+            #
+            if size is None:
+                rs = cur.fetchall();
+            # 判断是
+            elif size > 1 and size < 10000:
                 # 装载多条
-                rs = await cur.fetchmany(size);
+                rs = cur.fetchmany(size);
+                # 判断
+            elif size == 1:
+                # 装载一条
+                rs = cur.fetchone(size);
             else:
-                # 获得一条
-                rs = await cur.fetchall();
-            # 关闭游标
-            await rs.close();
+                # 获得前10000一条
+                rs = cur.fetchmany(10000);
+            # 关闭游标(不需要)
+            # await rs.close();
     # 日志打印数据量
-    logging.info('rows returned: %s' % len(rs))
-    return rs;
+    logging.info('rows returned: %s' % len(rs));
+    log(rs, None);
+    return list(rs);  # 以防万一如果不是list 全部转换为list
 
 
 # pass;
@@ -82,11 +123,11 @@ async def execute(sql, args, autocommit=True):
     with __pool.get_connection() as conn:
         if not autocommit:
             await conn.begin()
-        try:#cursor
-            #aiomysql.DictCursor
+        try:  # cursor
+            # aiomysql.DictCursor
             # async with conn.cursor() as cur:
             with conn as cur:
-                new_sql=sql.replace('?', '%s') % tuple(
+                new_sql = sql.replace('?', '%s') % tuple(
                     map(lambda obj: '\'' + str(obj) + '\'' if isinstance(obj, str) else obj, args))
                 print(new_sql);
                 # cur.execute(sql % args)
