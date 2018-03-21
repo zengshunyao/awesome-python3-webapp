@@ -100,6 +100,7 @@ async def response_factory(app, handler):
         return resp;
     return response;
 
+# filter需要在初始化jinja2时设置
 def datetime_filter(t):
     delta = int(time.time() - t);
     if delta < 60:
@@ -121,6 +122,7 @@ async def init(loop):
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ]);
+    # filter需要在初始化jinja2时设置
     init_jinja2(app, filters=dict(datetime=datetime_filter));
     # 自动把handler模块的所有符合条件的函数注册了:
     add_routes(app, 'handlers');
