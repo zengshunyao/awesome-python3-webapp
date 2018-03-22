@@ -7,12 +7,14 @@ import asyncio, os, inspect, logging, functools
 from urllib import parse;
 from aiohttp import web;
 from apis import APIError;
-#
+
+#装饰器
 def get(path):
     '''
     Define decorator @get('/path')
     '''
     def decorator(func):
+        #把原始函数的__name__等属性复制到wrapper()函数中，否则，有些依赖函数签名的代码执行就会出错
         @functools.wraps(func)
         def wrapper(*args, **kw):
             return func(*args, **kw);
@@ -26,6 +28,7 @@ def post(path):
     Define decorator @post('/path')
     '''
     def decorator(func):
+        # 把原始函数的__name__等属性复制到wrapper()函数中，否则，有些依赖函数签名的代码执行就会出错
         @functools.wraps(func)
         def wrapper(*args, **kw):
             return func(*args, **kw)
@@ -136,6 +139,7 @@ class RequestHandler(object):
             r = await self._func(**kw)
             return r
         except APIError as e:
+            logging.error(str(e));
             return dict(error=e.error, data=e.data, message=e.message)
 
 #增加静态文件映射

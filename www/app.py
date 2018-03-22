@@ -17,6 +17,8 @@ from jinja2 import Environment, FileSystemLoader;
 
 import orm
 from coroweb import add_routes, add_static
+from handlers import cookie2user, COOKIE_NAME
+
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -49,6 +51,26 @@ async def logger_factory(app, handler):
         return (await handler(request));
     return logger;
 
+#权限验证
+# @asyncio.coroutine
+async def auth_factory(app, handler):
+    # @asyncio.coroutine
+    async def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path));
+        # request['__user__'] = None
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME);
+        if cookie_str:
+            user = await cookie2user(cookie_str);
+            if user:
+                logging.info('set current user: %s' % user.email);
+                # request['__user__'] = user;
+                request.__user__ = user;
+        return (await handler(request));
+
+    return auth;
+
+#响应拦截器
 async def data_factory(app, handler):
     async def parse_data(request):
         if request.method == 'POST':
@@ -61,6 +83,7 @@ async def data_factory(app, handler):
         return (await handler(request));
     return parse_data;
 
+#响应体工厂
 async def response_factory(app, handler):
     async def response(request):
         logging.info('Response handler...');
@@ -85,6 +108,7 @@ async def response_factory(app, handler):
                 resp.content_type = 'application/json;charset=utf-8';
                 return resp;
             else:
+                r['__user__'] = request.__user__
                 resp = web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'));
                 resp.content_type = 'text/html;charset=utf-8';
                 return resp;
@@ -114,13 +138,14 @@ def datetime_filter(t):
     dt = datetime.fromtimestamp(t);
     return u'%s年%s月%s日' % (dt.year, dt.month, dt.day);
 
+#初始化
 async def init(loop):
     #创建连接池
     await orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='www-data', password='www-data', db='awesome')
     # 加入middleware、jinja2模板和自注册的支持
     # middleware是一种拦截器，一个URL在被某个函数处理前，可以经过一系列的middleware的处理
     app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
+        logger_factory, auth_factory, response_factory
     ]);
     # filter需要在初始化jinja2时设置
     init_jinja2(app, filters=dict(datetime=datetime_filter));
@@ -131,6 +156,7 @@ async def init(loop):
     logging.info('server started at http://127.0.0.1:9000...');
     return srv;
 
+#启动网络监听
 loop = asyncio.get_event_loop();
 loop.run_until_complete(init(loop));
 loop.run_forever();

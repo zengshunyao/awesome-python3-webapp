@@ -99,7 +99,7 @@ async def select(sql, args, size=None):
                 # 判断
             elif size == 1:
                 # 装载一条
-                rs = cur.fetchone(size);
+                rs = cur.fetchone();
             else:
                 # 获得前10000一条
                 rs = cur.fetchmany(10000);
@@ -108,7 +108,7 @@ async def select(sql, args, size=None):
     # 日志打印数据量
     logging.info('rows returned: %s' % len(rs));
     log(rs, None);
-    return list(rs);  # 以防万一如果不是list 全部转换为list
+    return rs;  # 以防万一如果不是list 全部转换为list
 
 
 # pass;
@@ -118,8 +118,8 @@ async def select(sql, args, size=None):
 # @asyncio.coroutine
 async def execute(sql, args, autocommit=True):
     log(sql, args);
-    print(sql, args)
-    logging.info(sql)
+    # print(sql, args)
+    # logging.info(sql)
     with __pool.get_connection() as conn:
         if not autocommit:
             await conn.begin()
@@ -324,7 +324,8 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
         if len(rs) == 0:
             return None;
-        return cls(**rs[0])
+        # print(**rs[0]);
+        return cls(**rs)
 
     async def save(self):
         args = list(map(self.getValueOrDefault, self.__fields__));
