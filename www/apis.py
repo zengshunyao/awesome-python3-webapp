@@ -7,9 +7,6 @@ __author__ = 'Michael Liao'
 JSON API definition.
 '''
 
-import json, logging, inspect, functools
-
-
 class APIError(Exception):
     '''
     the base APIError which contains error(required), data(optional) and message(optional).

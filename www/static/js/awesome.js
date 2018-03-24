@@ -75,7 +75,7 @@ if (! Number.prototype.toDateTime) {
     };
     var token = /([a-zA-Z]+)/;
     Number.prototype.toDateTime = function(format) {
-        var fmt = format || 'yyyy-MM-dd hh:mm:ss'
+        var fmt = format || 'yyyy-MM-dd hh:mm:ss';
         var dt = new Date(this * 1000);
         var arr = fmt.split(token);
         for (var i=0; i<arr.length; i++) {

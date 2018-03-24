@@ -66,6 +66,8 @@ async def auth_factory(app, handler):
                 logging.info('set current user: %s' % user.email);
                 # request['__user__'] = user;
                 request.__user__ = user;
+        if request.path.startswith('/manage/') and (request.__user__ is None or not request.__user__.admin):
+            return web.HTTPFound('/signin');
         return (await handler(request));
 
     return auth;
@@ -159,4 +161,6 @@ async def init(loop):
 #启动网络监听
 loop = asyncio.get_event_loop();
 loop.run_until_complete(init(loop));
+print ('begin');
 loop.run_forever();
+print('....')

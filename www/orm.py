@@ -316,7 +316,7 @@ class Model(dict, metaclass=ModelMetaclass):
         rs = await select(' '.join(sql), args, 1);
         if len(rs) == 0:
             return None;
-        return rs[0]['_num_']
+        return rs[0]['_num_'] if isinstance(rs,list) else rs['_num_']
 
     @classmethod  # 只在类中运行而不在实例中运行的方法
     async def find(cls, pk):
